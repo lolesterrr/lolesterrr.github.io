@@ -215,7 +215,14 @@ async function main() {
       const known = new Set(data.items.map(it => String(it.id)));
       await mkdir(IMG_DIR, { recursive: true });
       for (const pin of pins) {
-        if (known.has(pin.id) || hide.has(pin.id)) continue;
+        if (hide.has(pin.id)) continue;
+        if (known.has(pin.id)) {
+          // Titles and descriptions edited on Pinterest flow through too.
+          const it = data.items.find(x => String(x.id) === pin.id);
+          const title = (pin.title || pin.text || '').slice(0, 140), alt = (pin.text || pin.title || '').slice(0, 300);
+          if (it && (it.title !== title || it.alt !== alt)) { it.title = title; it.alt = alt; changed = true; log(`  Updated the title of ${pin.id}`); }
+          continue;
+        }
         const urls = imageUrls(pin.image);
         const grid = await firstWorking(urls.grid, pin.id);
         if (!grid) { warn(`Skipped pin ${pin.id}: its image could not be downloaded.`); continue; }
