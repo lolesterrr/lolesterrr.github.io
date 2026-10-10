@@ -138,7 +138,7 @@ async function tryBoard(board) {
   pins.slice(0, 3).forEach(p => log(`  ${p.id}  ${p.date || 'no date'}  ${(p.title || p.text || '(no title)').slice(0, 60)}`));
   if (!pins.length) { warn('No pins found. Is the board public and the link right?'); return; }
   for (const url of candidates(pins[0].image)) {
-    try { const got = await download(url); const d = dimensions(got.buf); log(`Image OK: ${url} (${got.type}, ${Math.round(got.buf.length / 1024)} KB, ${d.width || '?'}x${d.height || '?'})`); return; }
+    try { const got = await download(url); const d = dimensions(got.buf); console.log(`::notice::Board link works: ${pins.length} pin(s) in the feed, newest image ${d.width || '?'}x${d.height || '?'} (${Math.round(got.buf.length / 1024)} KB) from ${new URL(url).pathname.split('/')[1]}.`); return; }
     catch (e) { log(`  ${url} -> ${e.message}`); }
   }
   warn('The feed works, but its images could not be downloaded.');
