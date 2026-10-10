@@ -33,6 +33,7 @@ export function feedUrl(board) {
   try { u = new URL(board.trim()); } catch { return ''; }
   if (u.pathname.endsWith('.rss')) return u.href;
   const parts = u.pathname.split('/').filter(Boolean);
+  if (parts[0] === 'pin') return '';
   if (parts.length === 1) return `${u.origin}/${parts[0]}/feed.rss`;
   if (parts.length >= 2) return `${u.origin}/${parts[0]}/${parts[1]}.rss`;
   return '';
@@ -123,10 +124,27 @@ export function dimensions(buf) {
   return {};
 }
 
+// Share links from the Pinterest app (pin.it/...) redirect to the board.
+export async function resolveBoard(board) {
+  let u;
+  try { u = new URL(String(board || '').trim()); } catch { return String(board || '').trim(); }
+  if (!/(^|\.)pin\.it$/i.test(u.hostname)) return `${u.origin}${u.pathname}`;
+  try {
+    const r = await fetch(u.href, { headers: { 'User-Agent': UA }, redirect: 'follow' });
+    const final = new URL(r.url);
+    return `${final.origin}${final.pathname}`;
+  } catch (e) {
+    warn(`Could not open the short link ${u.href} (${e.message}).`);
+    return u.href;
+  }
+}
+
 // Dry run: check that a board link works, without saving anything.
-async function tryBoard(board) {
+async function tryBoard(link) {
+  const board = await resolveBoard(link);
+  if (board !== link) log(`${link} leads to ${board}`);
   const feed = feedUrl(board);
-  if (!feed) { warn(`"${board}" does not look like a Pinterest board link.`); return; }
+  if (!feed) { warn(`"${board}" is not a board link. Share the board itself, not a single pin.`); return; }
   log(`Checking ${feed}`);
   let r;
   try { r = await fetch(feed, { headers: { 'User-Agent': UA, Accept: 'application/rss+xml, application/xml;q=0.9, */*;q=0.5' } }); }
@@ -138,7 +156,7 @@ async function tryBoard(board) {
   pins.slice(0, 3).forEach(p => log(`  ${p.id}  ${p.date || 'no date'}  ${(p.title || p.text || '(no title)').slice(0, 60)}`));
   if (!pins.length) { warn('No pins found. Is the board public and the link right?'); return; }
   for (const url of candidates(pins[0].image)) {
-    try { const got = await download(url); const d = dimensions(got.buf); console.log(`::notice::Board link works: ${pins.length} pin(s) in the feed, newest image ${d.width || '?'}x${d.height || '?'} (${Math.round(got.buf.length / 1024)} KB) from ${new URL(url).pathname.split('/')[1]}.`); return; }
+    try { const got = await download(url); const d = dimensions(got.buf); console.log(`::notice::Board link works: ${board} has ${pins.length} pin(s) in its feed, newest image ${d.width || '?'}x${d.height || '?'} (${Math.round(got.buf.length / 1024)} KB) from ${new URL(url).pathname.split('/')[1]}.`); return; }
     catch (e) { log(`  ${url} -> ${e.message}`); }
   }
   warn('The feed works, but its images could not be downloaded.');
@@ -150,8 +168,9 @@ async function main() {
   const data = await readJSON(DATA_FILE, {});
   data.items = Array.isArray(data.items) ? data.items : [];
   const hide = new Set((Array.isArray(config.hide) ? config.hide : []).map(String));
-  const board = String(config.board || '').trim();
+  const board = config.board ? await resolveBoard(config.board) : '';
   const feed = feedUrl(board);
+  if (board && !feed) warn(`"${board}" is not a board link. Share the board itself, not a single pin.`);
   let changed = false;
 
   for (const it of data.items.filter(it => hide.has(String(it.id)))) {
