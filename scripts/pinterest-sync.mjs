@@ -15,6 +15,7 @@ const CONFIG_FILE = path.join(DIR, 'config.json');
 const DATA_FILE = path.join(DIR, 'sketchbook.json');
 const KEEP_ALIVE_DAYS = 25; // GitHub pauses hourly jobs after 60 quiet days
 const MAX_BYTES = 15 * 1024 * 1024;
+const LARGE_MAX_BYTES = 4 * 1024 * 1024; // past this, the full view uses the grid copy
 const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 const EXT = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
 
@@ -77,24 +78,38 @@ export function parseFeed(xml) {
   return pins;
 }
 
-// The feed links small thumbnails (236x). Try the full-size copies first.
-export function candidates(src) {
+// The feed links small thumbnails (236x). Pinterest keeps other sizes at the
+// same path: a 736px copy for the grid (light on mobile data) and a 1200px or
+// original copy for the full view.
+export function imageUrls(src) {
   const m = src.match(/^(https?:\/\/[^/]+)\/(?:\d+x\d*|originals)\/(.+)$/i);
-  if (!m) return [src];
+  if (!m) return { grid: [src], large: [src] };
   const [, host, rest] = m;
   const base = rest.replace(/\.[a-z0-9]+$/i, '');
   // Originals keep the uploaded format, which is often PNG even when the thumbnail is JPEG.
   const originals = [rest, `${base}.png`, `${base}.jpg`, `${base}.gif`].map(r => `${host}/originals/${r}`);
-  return [...new Set([...originals, `${host}/1200x/${rest}`, `${host}/736x/${rest}`, src])];
+  const uniq = a => [...new Set(a)];
+  return {
+    grid: uniq([`${host}/736x/${rest}`, `${host}/564x/${rest}`, `${host}/474x/${rest}`, src]),
+    large: uniq([`${host}/1200x/${rest}`, ...originals]),
+  };
 }
 
-async function download(url) {
+async function firstWorking(urls, label, maxBytes = MAX_BYTES) {
+  for (const url of urls) {
+    try { const got = await download(url, maxBytes); return { got, url }; }
+    catch (e) { log(`  ${label}: ${url} -> ${e.message}`); }
+  }
+  return null;
+}
+
+async function download(url, maxBytes = MAX_BYTES) {
   const r = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'image/jpeg,image/png,image/*;q=0.8' }, redirect: 'follow' });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const type = (r.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
   if (!EXT[type]) throw new Error(`not a usable image (${type || 'no type'})`);
   const buf = Buffer.from(await r.arrayBuffer());
-  if (!buf.length || buf.length > MAX_BYTES) throw new Error(`bad size (${buf.length} bytes)`);
+  if (!buf.length || buf.length > maxBytes) throw new Error(`bad size (${buf.length} bytes)`);
   return { buf, type };
 }
 
@@ -155,11 +170,12 @@ async function tryBoard(link) {
   log(`The feed lists ${pins.length} pin(s).`);
   pins.slice(0, 3).forEach(p => log(`  ${p.id}  ${p.date || 'no date'}  ${(p.title || p.text || '(no title)').slice(0, 60)}`));
   if (!pins.length) { warn('No pins found. Is the board public and the link right?'); return; }
-  for (const url of candidates(pins[0].image)) {
-    try { const got = await download(url); const d = dimensions(got.buf); console.log(`::notice::Board link works: ${board} has ${pins.length} pin(s) in its feed, newest image ${d.width || '?'}x${d.height || '?'} (${Math.round(got.buf.length / 1024)} KB) from ${new URL(url).pathname.split('/')[1]}.`); return; }
-    catch (e) { log(`  ${url} -> ${e.message}`); }
-  }
-  warn('The feed works, but its images could not be downloaded.');
+  const urls = imageUrls(pins[0].image);
+  const grid = await firstWorking(urls.grid, pins[0].id);
+  if (!grid) { warn('The feed works, but its images could not be downloaded.'); return; }
+  const large = await firstWorking(urls.large, pins[0].id, LARGE_MAX_BYTES);
+  const d = dimensions(grid.got.buf), kb = x => `${Math.round(x.got.buf.length / 1024)} KB`;
+  console.log(`::notice::Board link works: ${board} has ${pins.length} pin(s) in its feed. Newest drawing: grid copy ${d.width || '?'}x${d.height || '?'} (${kb(grid)}), full view ${large ? `${kb(large)} from ${new URL(large.url).pathname.split('/')[1]}` : 'same as grid'}.`);
 }
 
 async function main() {
@@ -174,7 +190,7 @@ async function main() {
   let changed = false;
 
   for (const it of data.items.filter(it => hide.has(String(it.id)))) {
-    if (it.file) await rm(path.join(IMG_DIR, path.basename(it.file)), { force: true });
+    for (const f of new Set([it.file, it.large].filter(Boolean))) await rm(path.join(IMG_DIR, path.basename(f)), { force: true });
     log(`Removed hidden drawing ${it.id}.`);
     changed = true;
   }
@@ -200,13 +216,18 @@ async function main() {
       await mkdir(IMG_DIR, { recursive: true });
       for (const pin of pins) {
         if (known.has(pin.id) || hide.has(pin.id)) continue;
-        let got = null, used = '';
-        for (const url of candidates(pin.image)) {
-          try { got = await download(url); used = url; break; } catch (e) { log(`  ${pin.id}: ${url} -> ${e.message}`); }
-        }
-        if (!got) { warn(`Skipped pin ${pin.id}: its image could not be downloaded.`); continue; }
+        const urls = imageUrls(pin.image);
+        const grid = await firstWorking(urls.grid, pin.id);
+        if (!grid) { warn(`Skipped pin ${pin.id}: its image could not be downloaded.`); continue; }
+        const got = grid.got, used = grid.url;
         const file = `${pin.id}.${EXT[got.type]}`;
         await writeFile(path.join(IMG_DIR, file), got.buf);
+        let large = file;
+        const big = await firstWorking(urls.large.filter(u => u !== used), pin.id, LARGE_MAX_BYTES);
+        if (big && (dimensions(big.got.buf).width || 0) > (dimensions(got.buf).width || 0)) {
+          large = `${pin.id}-large.${EXT[big.got.type]}`;
+          await writeFile(path.join(IMG_DIR, large), big.got.buf);
+        }
         data.items.push({
           id: pin.id,
           title: (pin.title || pin.text || '').slice(0, 140),
@@ -214,12 +235,13 @@ async function main() {
           link: pin.link,
           date: pin.date,
           file,
+          large,
           ...dimensions(got.buf),
           source: used,
         });
         known.add(pin.id);
         changed = true;
-        log(`  Added ${pin.id} (${file}, ${Math.round(got.buf.length / 1024)} KB)`);
+        log(`  Added ${pin.id} (${file}, ${Math.round(got.buf.length / 1024)} KB${large !== file ? `; full view ${large}` : ''})`);
       }
     }
   }

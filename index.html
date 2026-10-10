@@ -251,6 +251,13 @@ main { padding-bottom: 8px; }
 .facts dt { font-family: var(--f-pixel); font-size: 14px; color: var(--ink-soft); padding-top: 3px; }
 .facts dd { margin: 0; }
 .pierre-card { grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: start; }
+.lester-card { grid-template-columns: auto minmax(0, 1fr); gap: 24px; align-items: start; }
+.mugshot { margin: 0; width: clamp(150px, 15vw, 210px); }
+.mug { position: relative; display: block; width: 100%; aspect-ratio: 4 / 5; padding: 0; overflow: hidden; border: var(--line) solid var(--ink); background: var(--paper); cursor: pointer; }
+.mug img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.mug .mug-tone { position: absolute; inset: 0; opacity: 0; transition: opacity 0.3s ease; }
+.mug:hover .mug-tone, .mug[aria-pressed="true"] .mug-tone { opacity: 1; }
+.mug-cap { margin-top: 7px; font-family: var(--f-pixel); font-size: 12.5px; line-height: 1.35; color: var(--ink-soft); }
 .portrait-frame { justify-self: start; padding: 8px; border: 2px solid var(--ink); background-image: radial-gradient(var(--tone) 1.1px, transparent 1.5px); background-size: 7px 7px; }
 .portrait { width: 96px; height: 96px; image-rendering: pixelated; background-image: var(--sheet-pierre); background-size: 768px 384px; background-position: -288px -288px; filter: drop-shadow(1px 0 0 var(--cat-halo)) drop-shadow(-1px 0 0 var(--cat-halo)) drop-shadow(0 -1px 0 var(--cat-halo)); }
 .inv-help { margin: 0 0 4px; color: var(--ink-soft); max-width: 70ch; }
@@ -346,7 +353,7 @@ body.power-cut .chaser { z-index: 86; }
   .grid { grid-template-columns: minmax(0, 1fr); }
   .panel, .panel--wide { grid-column: 1 / -1; }
   .viz-stage--tall { min-height: 200px; }
-  .pierre-card { grid-template-columns: minmax(0, 1fr); }
+  .pierre-card, .lester-card { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 520px) {
   .facts { grid-template-columns: minmax(0, 1fr); gap: 2px; }
@@ -359,6 +366,7 @@ body.power-cut .chaser { z-index: 86; }
   .hop { animation: none; }
   .thread.is-playing .msg { transition: none; }
   .blackout.is-flicker { animation: none; }
+  .mug .mug-tone { transition: none; }
 }
 </style>
 <meta property="og:type" content="website">
@@ -633,7 +641,14 @@ body.power-cut .chaser { z-index: 86; }
     <div class="about">
       <article class="panel profile" id="p-profile" data-window data-perch data-label="my profile" data-pierre="My developer.&#10;He drew me in Python.">
         <div class="titlebar" data-drag><span class="path">lester.profile</span></div>
-        <div class="pbody">
+        <div class="pbody lester-card">
+          <figure class="mugshot">
+            <button class="mug" type="button" id="mug" aria-pressed="false" aria-label="Photo of Kajjabwangu Lester. Press to switch to the manga version.">
+              <img class="mug-photo" src="img/lester.jpg" alt="" width="240" height="300">
+              <img class="mug-tone" src="img/lester-manga.png" alt="" width="240" height="300">
+            </button>
+            <figcaption class="mug-cap" id="mug-cap">Hover for the manga version</figcaption>
+          </figure>
           <dl class="facts">
             <dt>Name</dt><dd>Kajjabwangu Lester</dd>
             <dt>GitHub</dt><dd><a href="https://github.com/lolesterrr" target="_blank" rel="noopener">lolesterrr<span class="sr-only"> (opens in a new tab)</span></a></dd>
@@ -1043,6 +1058,12 @@ const Pierre = (() => {
     arriveSay = 'You called?';
     wake(() => walkTo({ kind: 'free', x: tx, y: ty }));
   }
+  function remark(panel, text) {
+    if (!enabled || !placed || mode === 'sleep' || mode === 'tired' || mode === 'drag' || mode === 'fall') return;
+    lastPoke = now();
+    if (ownerOf(anchor) === panel && onScreen()) { say(text); return; }
+    arriveSay = text; walkTo(perchOn(panel, rand(0.62, 0.86)));
+  }
   function flung(panel) { if (ownerOf(anchor) === panel && enabled) { hop = 1; say('Easy with the window.'); } }
   function themeLine(t) { if (enabled && (mode === 'sit' || mode === 'wash')) say(t === 'dark' ? 'Much better.' : 'Too bright.'); }
   function inDark(v) {
@@ -1160,7 +1181,7 @@ const Pierre = (() => {
   function homePoint() { return point(home()); }
   function isHome() { return anchor && anchor.kind === 'name'; }
   function state() { return { mode, x, y, anchor: anchor && anchor.label, enabled }; }
-  return { step, poke, visit, hold, comeHere, flung, themeLine, inDark, setEnabled, place0, homePoint, isHome, wake, say, greetOr, state, get enabled() { return enabled; }, get mode() { return mode; } };
+  return { step, poke, visit, hold, comeHere, remark, flung, themeLine, inDark, setEnabled, place0, homePoint, isHome, wake, say, greetOr, state, get enabled() { return enabled; }, get mode() { return mode; } };
 })();
 
 /* ---------- the chaser (Pierre's cousin in the cow coat) ---------- */
@@ -1341,6 +1362,22 @@ windows.forEach(p => {
   bar.addEventListener('pointerup', end); bar.addEventListener('pointercancel', end);
 });
 if (!mqFine.matches) $('#work-note').textContent = 'Tap a panel and Pierre may come and sit on it. You can also pick him up and drop him somewhere.';
+
+/* ---------- the photo: hover or press for the manga version ---------- */
+(() => {
+  const mug = $('#mug'), cap = $('#mug-cap'); if (!mug) return;
+  const hoverable = mqFine.matches;
+  cap.textContent = hoverable ? 'Hover for the manga version' : 'Tap for the manga version';
+  let remarked = false;
+  const remark = () => { if (!remarked) { remarked = true; Pierre.remark($('#p-profile'), "That's him.\nI'm still the main character."); } };
+  mug.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') remark(); });
+  mug.addEventListener('click', () => {
+    const on = mug.getAttribute('aria-pressed') !== 'true';
+    mug.setAttribute('aria-pressed', String(on));
+    if (!hoverable) cap.textContent = on ? 'Tap for the photo' : 'Tap for the manga version';
+    remark();
+  });
+})();
 
 /* ---------- inventory ---------- */
 const NAMES = { dozi: 'Dozi', urc: 'URC IT Inventory', pierre: 'Monsieur Pierre', helpdesk: 'URC Helpdesk', ve: 've-inference', tsp: 'Travelling Salesman', aits: 'AITS', eventfinder: 'EventFinder', library: 'the library system' };
@@ -1769,7 +1806,7 @@ doc.addEventListener('keydown', e => {
 const lb = $('#lightbox');
 function openLightbox(it, alt, title) {
   if (!lb) return;
-  $('#lb-img').src = 'sketchbook/img/' + it.file; $('#lb-img').alt = alt;
+  $('#lb-img').src = 'sketchbook/img/' + (it.large || it.file); $('#lb-img').alt = alt;
   $('#lb-cap').textContent = title || 'Untitled';
   const link = $('#lb-link'); if (it.link) { link.href = it.link; link.hidden = false; } else link.hidden = true;
   try { lb.showModal(); } catch (_) { lb.setAttribute('open', ''); }
