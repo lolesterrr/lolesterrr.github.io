@@ -1,0 +1,45 @@
+name: Sketchbook sync
+
+# Copies new pins from the Pinterest board in sketchbook/config.json
+# into the site. Runs every hour, when the config changes, or on demand
+# (Actions tab > Sketchbook sync > Run workflow).
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['sketchbook/config.json']
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: sketchbook-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Pull new drawings from Pinterest
+        run: node scripts/pinterest-sync.mjs
+
+      - name: Save them to the site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$(git status --porcelain -- sketchbook)" ]; then
+            echo "Nothing new."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sketchbook
+          git commit -m "Sketchbook: sync from Pinterest"
+          git push
+          gh api -X POST "repos/$GITHUB_REPOSITORY/pages/builds" --silent || echo "GitHub Pages will rebuild on its own."
