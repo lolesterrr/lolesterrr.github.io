@@ -118,9 +118,32 @@ code { font-family: var(--f-pixel); font-size: 0.95em; }
 }
 .name { margin: 0; font-family: var(--f-display); font-weight: 400; line-height: 0.92; text-transform: uppercase; letter-spacing: -0.01em; }
 .name-line { display: block; width: max-content; white-space: nowrap; font-size: clamp(30px, 8.6vw, 118px); }
-.hero-text { position: relative; margin-top: clamp(18px, 2.8vw, 34px); max-width: 66ch; }
-.roles { margin: 0 0 8px; font-weight: 700; font-size: clamp(18px, 1.9vw, 22px); line-height: 1.35; text-wrap: balance; }
-.intro { margin: 0; font-size: clamp(16.5px, 1.35vw, 19px); text-wrap: pretty; }
+.hero-body {
+  position: relative; display: grid; align-items: start;
+  grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "roles pfp" "intro pfp" "cta pfp";
+  gap: 0 clamp(20px, 4vw, 56px); margin-top: clamp(18px, 2.8vw, 34px);
+}
+.roles { grid-area: roles; max-width: 40ch; margin: 0 0 8px; font-weight: 700; font-size: clamp(18px, 1.9vw, 22px); line-height: 1.35; text-wrap: balance; }
+.intro { grid-area: intro; max-width: 62ch; margin: 0; font-size: clamp(16.5px, 1.35vw, 19px); text-wrap: pretty; }
+.hero-body .cta { grid-area: cta; }
+.pfp {
+  grid-area: pfp; position: relative; display: block; width: clamp(150px, 17vw, 230px); aspect-ratio: 4 / 5; padding: 0;
+  overflow: hidden; border: var(--line) solid var(--ink); background: var(--paper); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pfp img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; transition: opacity 0.25s ease; }
+.pfp .pfp-b { opacity: 0; }
+.pfp[aria-pressed="true"] .pfp-b { opacity: 1; }
+.pfp[aria-pressed="true"] .pfp-a { opacity: 0; }
+.pfp-tab { position: absolute; right: 0; bottom: 0; display: grid; place-items: center; width: 28px; height: 28px; background: var(--ink); color: var(--panel); }
+.pfp-tab svg { width: 14px; height: 14px; shape-rendering: crispEdges; }
+.pfp:hover .pfp-tab { background: var(--crown); color: var(--on-crown); }
+.pfp:focus-visible { outline-offset: 3px; }
+@media (max-width: 600px) {
+  .hero-body { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "pfp roles" "intro intro" "cta cta"; gap: 0 16px; }
+  .pfp { width: clamp(96px, 30vw, 130px); align-self: center; margin-bottom: 16px; }
+  .roles { align-self: center; margin-bottom: 16px; }
+}
 .roles span, .intro span { background: var(--panel); box-decoration-break: clone; -webkit-box-decoration-break: clone; padding: 0 2px; }
 .cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
 .btn {
@@ -212,11 +235,21 @@ main { padding-bottom: 8px; }
 .meta { font-family: var(--f-pixel); font-size: 14px; color: var(--ink-soft); }
 
 /* sketchbook (GitHub Pages build) */
-.sketches { columns: 3 260px; column-gap: var(--gap); }
-.sketch { break-inside: avoid; margin: 0 0 var(--gap); background: var(--panel); border: var(--line) solid var(--ink); display: block; }
-.sketch-open { display: block; width: 100%; padding: 0; margin: 0; border: 0; border-bottom: var(--line) solid var(--ink); background: var(--paper); cursor: zoom-in; }
-.sketch-open img { display: block; width: 100%; height: auto; }
-.sketch figcaption { display: flex; justify-content: space-between; align-items: baseline; gap: 6px 14px; flex-wrap: wrap; padding: 9px 12px 11px; font-size: 14.5px; line-height: 1.4; }
+.strip-nav { display: flex; gap: 8px; margin-left: auto; align-self: center; }
+.strip-nav .tbtn[disabled] { opacity: 0.35; cursor: default; background: var(--panel); color: var(--ink); }
+.strip-frame { position: relative; background: var(--panel); border: var(--line) solid var(--ink); }
+.strip-frame::after { content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 48px; pointer-events: none; background: linear-gradient(to right, rgb(0 0 0 / 0), var(--panel)); transition: opacity 0.2s ease; }
+.strip-frame.at-end::after { opacity: 0; }
+.sketches {
+  display: flex; gap: var(--gap); padding: 14px; overflow-x: auto; overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity; scroll-padding: 14px; scrollbar-width: thin; scrollbar-color: var(--ink) transparent;
+}
+.sketches:focus-visible { outline: 3px solid var(--crown-deep); outline-offset: -8px; }
+.sketches.is-grabbing { cursor: grabbing; scroll-snap-type: none; user-select: none; -webkit-user-select: none; }
+.sketch { flex: none; display: flex; flex-direction: column; margin: 0; scroll-snap-align: start; background: var(--panel); border: var(--line) solid var(--ink); }
+.sketch-open { display: block; padding: 0; margin: 0; border: 0; border-bottom: var(--line) solid var(--ink); background: var(--paper); cursor: zoom-in; }
+.sketch-open img { display: block; height: clamp(220px, 32vw, 340px); width: auto; max-width: none; }
+.sketch figcaption { width: 0; min-width: 100%; display: flex; justify-content: space-between; align-items: baseline; gap: 6px 14px; flex-wrap: wrap; padding: 9px 12px 11px; font-size: 14.5px; line-height: 1.4; }
 .sketch-title { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
 .sketch-more { margin: 4px 0 0; font-weight: 700; }
 .lightbox { max-width: min(1100px, calc(100vw - 24px)); max-height: calc(100vh - 24px); padding: 0; border: var(--line) solid var(--ink); background: var(--panel); color: var(--ink); }
@@ -244,20 +277,13 @@ main { padding-bottom: 8px; }
 
 /* about */
 .about { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--gap); }
-.profile { grid-column: span 7; }
 .profile--pierre { grid-column: span 5; }
-.inventory { grid-column: 1 / -1; }
+.inventory { grid-column: span 7; }
 .facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 9px 18px; margin: 0; }
 .facts dt { font-family: var(--f-pixel); font-size: 14px; color: var(--ink-soft); padding-top: 3px; }
 .facts dd { margin: 0; }
 .pierre-card { grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: start; }
-.lester-card { grid-template-columns: auto minmax(0, 1fr); gap: 24px; align-items: start; }
-.mugshot { margin: 0; width: clamp(150px, 15vw, 210px); }
-.mug { position: relative; display: block; width: 100%; aspect-ratio: 4 / 5; padding: 0; overflow: hidden; border: var(--line) solid var(--ink); background: var(--paper); cursor: pointer; }
-.mug img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.mug .mug-tone { position: absolute; inset: 0; opacity: 0; transition: opacity 0.3s ease; }
-.mug:hover .mug-tone, .mug[aria-pressed="true"] .mug-tone { opacity: 1; }
-.mug-cap { margin-top: 7px; font-family: var(--f-pixel); font-size: 12.5px; line-height: 1.35; color: var(--ink-soft); }
+
 .portrait-frame { justify-self: start; padding: 8px; border: 2px solid var(--ink); background-image: radial-gradient(var(--tone) 1.1px, transparent 1.5px); background-size: 7px 7px; }
 .portrait { width: 96px; height: 96px; image-rendering: pixelated; background-image: var(--sheet-pierre); background-size: 768px 384px; background-position: -288px -288px; filter: drop-shadow(1px 0 0 var(--cat-halo)) drop-shadow(-1px 0 0 var(--cat-halo)) drop-shadow(0 -1px 0 var(--cat-halo)); }
 .inv-help { margin: 0 0 4px; color: var(--ink-soft); max-width: 70ch; }
@@ -353,7 +379,7 @@ body.power-cut .chaser { z-index: 86; }
   .grid { grid-template-columns: minmax(0, 1fr); }
   .panel, .panel--wide { grid-column: 1 / -1; }
   .viz-stage--tall { min-height: 200px; }
-  .pierre-card, .lester-card { grid-template-columns: minmax(0, 1fr); }
+  .pierre-card { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 520px) {
   .facts { grid-template-columns: minmax(0, 1fr); gap: 2px; }
@@ -366,7 +392,7 @@ body.power-cut .chaser { z-index: 86; }
   .hop { animation: none; }
   .thread.is-playing .msg { transition: none; }
   .blackout.is-flicker { animation: none; }
-  .mug .mug-tone { transition: none; }
+  .pfp img { transition: none; }
 }
 </style>
 <meta property="og:type" content="website">
@@ -421,7 +447,7 @@ body.power-cut .chaser { z-index: 86; }
     <canvas class="focus" id="focus" aria-hidden="true"></canvas>
     <p class="narration">Kampala, <span data-clock>UTC+3</span>. <span id="status">Monsieur Pierre is asleep on my name.</span></p>
     <h1 class="name" id="name"><span class="name-line" id="perch-name" data-label="my name">Kajjabwangu</span> <span class="name-line" data-label="my name">Lester</span></h1>
-    <div class="hero-text">
+    <div class="hero-body">
       <p class="roles"><span>Full-stack developer, database administrator and artist.</span></p>
       <p class="intro"><span>I study Computer Science at Makerere University in Kampala, and I'm a co-founder of Ve-Apparel. Lately I've been building a study app for pharmacy students, an IT asset register for Uganda Railways, and a cat who lives on your desktop.</span></p>
       <div class="cta">
@@ -429,6 +455,11 @@ body.power-cut .chaser { z-index: 86; }
         <button class="btn" type="button" data-copy-email>Copy my email</button>
         <a class="btn" href="https://github.com/lolesterrr" target="_blank" rel="noopener">GitHub<span class="sr-only"> (opens in a new tab)</span></a>
       </div>
+      <button class="pfp" type="button" id="pfp" aria-pressed="false" aria-label="Photo of Kajjabwangu Lester. Tap to switch the picture.">
+        <img class="pfp-a" src="img/lester.jpg" alt="" width="240" height="300">
+        <img class="pfp-b" src="img/lester-alt.jpg" alt="" width="240" height="300">
+        <span class="pfp-tab" aria-hidden="true"><svg viewBox="0 0 8 8"><path fill="currentColor" d="M1 1h4V0h1v1h1v1H6v1H5V2H1zm6 5H3v1H2V6H1V5h1V4h1v1h4z"/></svg></span>
+      </button>
     </div>
   </section>
 
@@ -579,8 +610,14 @@ body.power-cut .chaser { z-index: 86; }
     <div class="section-head">
       <h2 id="sketch-h">Sketchbook</h2>
       <p class="section-note">Drawings from my Pinterest board. When I pin something new, it shows up here within the hour.</p>
+      <div class="strip-nav">
+        <button class="tbtn" type="button" id="strip-prev" aria-controls="sketches" aria-label="Scroll the sketchbook back"><svg viewBox="0 0 8 8" aria-hidden="true"><path fill="currentColor" d="M5 1h1v6H5V6H4V5H3V3h1V2h1z"/></svg></button>
+        <button class="tbtn" type="button" id="strip-next" aria-controls="sketches" aria-label="Scroll the sketchbook forward"><svg viewBox="0 0 8 8" aria-hidden="true"><path fill="currentColor" d="M2 1h1v1h1v1h1v2H4v1H3v1H2z"/></svg></button>
+      </div>
     </div>
-    <div class="sketches" id="sketches"></div>
+    <div class="strip-frame" id="strip-frame" data-perch data-label="the sketchbook" data-pierre="I'd put these on the fridge.&#10;If I had a fridge.">
+      <div class="sketches" id="sketches" tabindex="0" role="region" aria-label="Drawings. Scroll sideways for more."></div>
+    </div>
     <p class="sketch-more" id="sketch-more" hidden><a id="sketch-board" href="https://www.pinterest.com/" target="_blank" rel="noopener">See the whole board on Pinterest<span class="sr-only"> (opens in a new tab)</span></a></p>
   </section>
   
@@ -639,29 +676,6 @@ body.power-cut .chaser { z-index: 86; }
       <h2 id="about-h">About</h2>
     </div>
     <div class="about">
-      <article class="panel profile" id="p-profile" data-window data-perch data-label="my profile" data-pierre="My developer.&#10;He drew me in Python.">
-        <div class="titlebar" data-drag><span class="path">lester.profile</span></div>
-        <div class="pbody lester-card">
-          <figure class="mugshot">
-            <button class="mug" type="button" id="mug" aria-pressed="false" aria-label="Photo of Kajjabwangu Lester. Press to switch to the manga version.">
-              <img class="mug-photo" src="img/lester.jpg" alt="" width="240" height="300">
-              <img class="mug-tone" src="img/lester-manga.png" alt="" width="240" height="300">
-            </button>
-            <figcaption class="mug-cap" id="mug-cap">Hover for the manga version</figcaption>
-          </figure>
-          <dl class="facts">
-            <dt>Name</dt><dd>Kajjabwangu Lester</dd>
-            <dt>GitHub</dt><dd><a href="https://github.com/lolesterrr" target="_blank" rel="noopener">lolesterrr<span class="sr-only"> (opens in a new tab)</span></a></dd>
-            <dt>Based in</dt><dd>Kampala, Uganda</dd>
-            <dt>Studying</dt><dd>BSc Computer Science at Makerere University, since 2024</dd>
-            <dt>Does</dt><dd>Full-stack development, database administration and art</dd>
-            <dt>Working on</dt><dd>Ve-Apparel, a startup I co-founded</dd>
-            <dt>Experience</dt><dd>Internship at Uganda Railways Corporation in 2026. Before that, data entry, data collection, teller work and account balancing at Sezibwa Financials.</dd>
-            <dt>Certificate</dt><dd>CCNA1</dd>
-            <dt>Likes</dt><dd>Language learning, art, coding, reading, writing and gaming</dd>
-          </dl>
-        </div>
-      </article>
 
       <article class="panel profile profile--pierre" id="p-pierre-profile" data-window data-perch data-label="his own profile" data-pierre="Yes, that's my good side.">
         <div class="titlebar" data-drag><span class="path">pierre.profile</span></div>
@@ -983,8 +997,8 @@ const Pierre = (() => {
     let bx, by, cls;
     const aboveY = y - BOX - bh - 14;
     if (aboveY >= viewTop) { cls = 'above'; bx = clamp(x - 30, 8, W - bw - 8); by = aboveY; }
-    else if (x - BOX / 2 - bw - 16 >= 8) { cls = 'left'; bx = x - BOX / 2 - bw - 16; by = Math.max(viewTop, y - BOX + 4); }
-    else if (x + BOX / 2 + 16 + bw <= W - 8) { cls = 'right'; bx = x + BOX / 2 + 16; by = Math.max(viewTop, y - BOX + 4); }
+    else if (x - BOX / 2 - bw - 16 >= 8) { cls = 'left'; bx = x - BOX / 2 - bw - 16; by = y - BOX + 4; }
+    else if (x + BOX / 2 + 16 + bw <= W - 8) { cls = 'right'; bx = x + BOX / 2 + 16; by = y - BOX + 4; }
     else { cls = 'below'; bx = clamp(x - 30, 8, W - bw - 8); by = y + 16; }
     if (cls !== place) { bub.classList.remove('bubble--' + place); bub.classList.add('bubble--' + cls); place = cls; }
     bub.style.transform = `translate3d(${Math.round(bx)}px, ${Math.round(by)}px, 0)`;
@@ -1058,11 +1072,15 @@ const Pierre = (() => {
     arriveSay = 'You called?';
     wake(() => walkTo({ kind: 'free', x: tx, y: ty }));
   }
-  function remark(panel, text) {
-    if (!enabled || !placed || mode === 'sleep' || mode === 'tired' || mode === 'drag' || mode === 'fall') return;
-    lastPoke = now();
-    if (ownerOf(anchor) === panel && onScreen()) { say(text); return; }
-    arriveSay = text; walkTo(perchOn(panel, rand(0.62, 0.86)));
+  function reactTo(panel, text) {
+    if (!enabled || !placed || mode === 'drag' || mode === 'fall') return;
+    const go = () => {
+      const here = anchor && anchor.el && panel.contains(anchor.el);
+      if (here && onScreen()) { say(text); return; }
+      arriveSay = text;
+      walkTo(panel.contains(perchName) ? home() : perchOn(panel, rand(0.62, 0.86)));
+    };
+    if (mode === 'sleep' || mode === 'tired') wake(go); else go();
   }
   function flung(panel) { if (ownerOf(anchor) === panel && enabled) { hop = 1; say('Easy with the window.'); } }
   function themeLine(t) { if (enabled && (mode === 'sit' || mode === 'wash')) say(t === 'dark' ? 'Much better.' : 'Too bright.'); }
@@ -1181,7 +1199,7 @@ const Pierre = (() => {
   function homePoint() { return point(home()); }
   function isHome() { return anchor && anchor.kind === 'name'; }
   function state() { return { mode, x, y, anchor: anchor && anchor.label, enabled }; }
-  return { step, poke, visit, hold, comeHere, remark, flung, themeLine, inDark, setEnabled, place0, homePoint, isHome, wake, say, greetOr, state, get enabled() { return enabled; }, get mode() { return mode; } };
+  return { step, poke, visit, hold, comeHere, reactTo, flung, themeLine, inDark, setEnabled, place0, homePoint, isHome, wake, say, greetOr, state, get enabled() { return enabled; }, get mode() { return mode; } };
 })();
 
 /* ---------- the chaser (Pierre's cousin in the cow coat) ---------- */
@@ -1363,19 +1381,14 @@ windows.forEach(p => {
 });
 if (!mqFine.matches) $('#work-note').textContent = 'Tap a panel and Pierre may come and sit on it. You can also pick him up and drop him somewhere.';
 
-/* ---------- the photo: hover or press for the manga version ---------- */
+/* ---------- the picture next to the name: tap to switch ---------- */
 (() => {
-  const mug = $('#mug'), cap = $('#mug-cap'); if (!mug) return;
-  const hoverable = mqFine.matches;
-  cap.textContent = hoverable ? 'Hover for the manga version' : 'Tap for the manga version';
-  let remarked = false;
-  const remark = () => { if (!remarked) { remarked = true; Pierre.remark($('#p-profile'), "That's him.\nI'm still the main character."); } };
-  mug.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') remark(); });
-  mug.addEventListener('click', () => {
-    const on = mug.getAttribute('aria-pressed') !== 'true';
-    mug.setAttribute('aria-pressed', String(on));
-    if (!hoverable) cap.textContent = on ? 'Tap for the photo' : 'Tap for the manga version';
-    remark();
+  const pfp = $('#pfp'); if (!pfp) return;
+  let reacted = false;
+  pfp.addEventListener('click', () => {
+    const on = pfp.getAttribute('aria-pressed') !== 'true';
+    pfp.setAttribute('aria-pressed', String(on));
+    if (on && !reacted) { reacted = true; Pierre.reactTo($('.hero'), 'Finally.\nA cat in charge.'); }
   });
 })();
 
@@ -1781,10 +1794,8 @@ doc.addEventListener('keydown', e => {
   const items = (data && Array.isArray(data.items) ? data.items : []).filter(it => it && it.file);
   if (!items.length) return;
   const fmt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-  const lines = ["I'd put this on the fridge.\nIf I had a fridge.", 'Ten out of ten.\nWould nap on.', 'Is that me?\nIt should be me.'];
   items.forEach((it, i) => {
-    const fig = doc.createElement('figure'); fig.className = 'sketch'; fig.dataset.perch = ''; fig.dataset.label = 'a drawing';
-    if (i % 3 === 0) fig.dataset.pierre = lines[(i / 3) % lines.length];
+    const fig = doc.createElement('figure'); fig.className = 'sketch';
     const btn = doc.createElement('button'); btn.type = 'button'; btn.className = 'sketch-open';
     const title = (it.title || '').trim();
     btn.setAttribute('aria-label', 'Open drawing' + (title ? ': ' + title : ''));
@@ -1800,8 +1811,32 @@ doc.addEventListener('keydown', e => {
   });
   if (data.board) { const a = $('#sketch-board'); a.href = data.board; $('#sketch-more').hidden = false; }
   sec.hidden = false; const nl = $('#nav-sketch'); if (nl) nl.hidden = false;
-  grid.addEventListener('load', () => emit('layout'), true);
+  grid.addEventListener('load', () => { emit('layout'); edges(); }, true);
   emit('layout');
+  // arrows, the fade at the edge, and drag to scroll with a mouse
+  const frame = $('#strip-frame'), prev = $('#strip-prev'), next = $('#strip-next');
+  function edges() {
+    const max = grid.scrollWidth - grid.clientWidth - 2;
+    prev.disabled = grid.scrollLeft <= 2; next.disabled = grid.scrollLeft >= max;
+    frame.classList.toggle('at-end', grid.scrollLeft >= max);
+  }
+  const page = dir => grid.scrollBy({ left: dir * Math.max(240, grid.clientWidth * 0.8), behavior: reduce ? 'auto' : 'smooth' });
+  prev.addEventListener('click', () => page(-1)); next.addEventListener('click', () => page(1));
+  grid.addEventListener('scroll', edges, { passive: true });
+  addEventListener('resize', edges, { passive: true });
+  let drag = null, dragged = false;
+  grid.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' || e.button !== 0) return; drag = { x: e.clientX, left: grid.scrollLeft, id: e.pointerId }; dragged = false; });
+  grid.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x;
+    if (!dragged && Math.abs(dx) > 6) { dragged = true; grid.classList.add('is-grabbing'); try { grid.setPointerCapture(e.pointerId); } catch (_) {} }
+    if (dragged) grid.scrollLeft = drag.left - dx;
+  });
+  const endDrag = () => { drag = null; grid.classList.remove('is-grabbing'); };
+  grid.addEventListener('pointerup', endDrag); grid.addEventListener('pointercancel', endDrag);
+  grid.addEventListener('click', e => { if (dragged) { e.preventDefault(); e.stopPropagation(); dragged = false; } }, true);
+  grid.addEventListener('dragstart', e => e.preventDefault());
+  edges();
 })();
 const lb = $('#lightbox');
 function openLightbox(it, alt, title) {
