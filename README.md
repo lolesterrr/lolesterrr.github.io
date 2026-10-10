@@ -16,7 +16,7 @@ The personal site of Kajjabwangu Lester, served by GitHub Pages at https://loles
 
 1. Put the link to a public Pinterest board in `sketchbook/config.json`, under `"board"`.
 2. The sync runs every hour, and right away whenever `config.json` changes. New pins show up on the site within about an hour.
-3. To run it now: Actions tab, then **Sketchbook sync**, then **Run workflow**.
+3. To run it now: Actions tab, then **Sketchbook sync**, then **Run workflow**. Paste a board link into the box to check that it works without saving anything.
 4. To hide a drawing, add its pin number to `"hide"`. The number is in the pin's link: `pinterest.com/pin/<number>/`.
 
 Good to know:

@@ -7,6 +7,11 @@ on:
   schedule:
     - cron: '17 * * * *'
   workflow_dispatch:
+    inputs:
+      test_board:
+        description: Check a Pinterest board link without saving anything (leave empty for a normal sync)
+        required: false
+        default: ''
   push:
     branches: [main]
     paths: ['sketchbook/config.json']
@@ -27,13 +32,16 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Pull new drawings from Pinterest
+        env:
+          SKETCHBOOK_TEST_BOARD: ${{ inputs.test_board }}
         run: node scripts/pinterest-sync.mjs
 
       - name: Save them to the site
         env:
           GH_TOKEN: ${{ github.token }}
+          SKETCHBOOK_TEST_BOARD: ${{ inputs.test_board }}
         run: |
-          if [ -z "$(git status --porcelain -- sketchbook)" ]; then
+          if [ -n "$SKETCHBOOK_TEST_BOARD" ] || [ -z "$(git status --porcelain -- sketchbook)" ]; then
             echo "Nothing new."
             exit 0
           fi

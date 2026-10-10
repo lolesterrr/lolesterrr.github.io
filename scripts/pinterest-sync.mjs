@@ -123,7 +123,29 @@ export function dimensions(buf) {
   return {};
 }
 
+// Dry run: check that a board link works, without saving anything.
+async function tryBoard(board) {
+  const feed = feedUrl(board);
+  if (!feed) { warn(`"${board}" does not look like a Pinterest board link.`); return; }
+  log(`Checking ${feed}`);
+  let r;
+  try { r = await fetch(feed, { headers: { 'User-Agent': UA, Accept: 'application/rss+xml, application/xml;q=0.9, */*;q=0.5' } }); }
+  catch (e) { warn(`Could not reach the feed (${e.message}).`); return; }
+  log(`HTTP ${r.status}, ${r.headers.get('content-type') || 'no content type'}`);
+  const xml = r.ok ? await r.text() : '';
+  const pins = parseFeed(xml);
+  log(`The feed lists ${pins.length} pin(s).`);
+  pins.slice(0, 3).forEach(p => log(`  ${p.id}  ${p.date || 'no date'}  ${(p.title || p.text || '(no title)').slice(0, 60)}`));
+  if (!pins.length) { warn('No pins found. Is the board public and the link right?'); return; }
+  for (const url of candidates(pins[0].image)) {
+    try { const got = await download(url); const d = dimensions(got.buf); log(`Image OK: ${url} (${got.type}, ${Math.round(got.buf.length / 1024)} KB, ${d.width || '?'}x${d.height || '?'})`); return; }
+    catch (e) { log(`  ${url} -> ${e.message}`); }
+  }
+  warn('The feed works, but its images could not be downloaded.');
+}
+
 async function main() {
+  if (process.env.SKETCHBOOK_TEST_BOARD) return tryBoard(process.env.SKETCHBOOK_TEST_BOARD.trim());
   const config = await readJSON(CONFIG_FILE, {});
   const data = await readJSON(DATA_FILE, {});
   data.items = Array.isArray(data.items) ? data.items : [];
