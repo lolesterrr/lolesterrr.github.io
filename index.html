@@ -277,7 +277,8 @@ main { padding-bottom: 8px; }
 
 /* about */
 .about { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--gap); }
-.profile--pierre { grid-column: span 5; }
+.about-col { grid-column: span 5; display: grid; gap: var(--gap); align-content: start; min-width: 0; }
+.about-col > .panel { grid-column: auto; }
 .inventory { grid-column: span 7; }
 .facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 9px 18px; margin: 0; }
 .facts dt { font-family: var(--f-pixel); font-size: 14px; color: var(--ink-soft); padding-top: 3px; }
@@ -373,7 +374,7 @@ body.power-cut .chaser { z-index: 86; }
   .team-item + .team-item { border-left: 0; border-top: var(--line) solid var(--ink); }
   .volumes { grid-template-columns: minmax(0, 1fr); }
   .about { grid-template-columns: minmax(0, 1fr); }
-  .about > .panel { grid-column: auto; }
+  .about > .panel, .about > .about-col { grid-column: auto; }
 }
 @media (max-width: 720px) {
   .grid { grid-template-columns: minmax(0, 1fr); }
@@ -677,21 +678,32 @@ body.power-cut .chaser { z-index: 86; }
     </div>
     <div class="about">
 
-      <article class="panel profile profile--pierre" id="p-pierre-profile" data-window data-perch data-label="his own profile" data-pierre="Yes, that's my good side.">
-        <div class="titlebar" data-drag><span class="path">pierre.profile</span></div>
-        <div class="pbody pierre-card">
-          <div class="portrait-frame"><div class="portrait" id="portrait" role="img" aria-label="Portrait of Monsieur Pierre, a pixel-art tuxedo cat"></div></div>
-          <dl class="facts">
-            <dt>Name</dt><dd>Monsieur Pierre</dd>
-            <dt>Species</dt><dd>Tuxedo cat, 32 by 32 pixels</dd>
-            <dt>Born in</dt><dd><code>tools/makepierre.py</code></dd>
-            <dt>Lives on</dt><dd>macOS desktops, and this page</dd>
-            <dt>Likes</dt><dd>Naps, your clipboard, whichever window you're using</dd>
-            <dt>Dislikes</dt><dd>Violent mouse swings</dd>
-            <dt>Schedule</dt><dd>Nap, snack, nap, judge you, nap</dd>
-          </dl>
-        </div>
-      </article>
+      <div class="about-col">
+        <article class="panel profile profile--pierre" id="p-pierre-profile" data-window data-perch data-label="his own profile" data-pierre="Yes, that's my good side.">
+          <div class="titlebar" data-drag><span class="path">pierre.profile</span></div>
+          <div class="pbody pierre-card">
+            <div class="portrait-frame"><div class="portrait" id="portrait" role="img" aria-label="Portrait of Monsieur Pierre, a pixel-art tuxedo cat"></div></div>
+            <dl class="facts">
+              <dt>Name</dt><dd>Monsieur Pierre</dd>
+              <dt>Species</dt><dd>Tuxedo cat, 32 by 32 pixels</dd>
+              <dt>Born in</dt><dd><code>tools/makepierre.py</code></dd>
+              <dt>Lives on</dt><dd>macOS desktops, and this page</dd>
+              <dt>Likes</dt><dd>Naps, your clipboard, whichever window you're using</dd>
+              <dt>Dislikes</dt><dd>Violent mouse swings</dd>
+              <dt>Schedule</dt><dd>Nap, snack, nap, judge you, nap</dd>
+            </dl>
+          </div>
+        </article>
+        <article class="panel" id="p-more" data-window data-perch data-label="my notes" data-pierre="He likes six things.&#10;I like naps.">
+          <div class="titlebar" data-drag><span class="path">more-about-me.txt</span></div>
+          <div class="pbody">
+            <dl class="facts">
+              <dt>Likes</dt><dd>Language learning, art, coding, reading, writing and gaming</dd>
+              <dt>Worked at</dt><dd>Sezibwa Financials, before the railway internship: data entry, data collection, teller work and account balancing</dd>
+            </dl>
+          </div>
+        </article>
+      </div>
 
       <article class="panel inventory" id="p-inventory" data-window data-perch data-label="the inventory" data-pierre="I'm not in the inventory.&#10;I'm priceless.">
         <div class="titlebar" data-drag><span class="path">inventory</span><span class="chips"><span class="chip">17 items</span></span></div>
