@@ -1792,11 +1792,11 @@ doc.addEventListener('keydown', e => {
     img.loading = 'lazy'; img.decoding = 'async'; if (it.width && it.height) { img.width = it.width; img.height = it.height; }
     btn.append(img);
     const cap = doc.createElement('figcaption');
-    const tt = doc.createElement('span'); tt.className = 'sketch-title'; tt.textContent = title || 'Untitled';
     const dd = doc.createElement('span'); dd.className = 'date';
     const when = Date.parse(it.date || ''); dd.textContent = isFinite(when) ? fmt.format(new Date(when)) : '';
-    cap.append(tt, dd); fig.append(btn, cap); grid.append(fig);
-    btn.addEventListener('click', () => openLightbox(it, img.alt, title));
+    if (title) { const tt = doc.createElement('span'); tt.className = 'sketch-title'; tt.textContent = title; cap.append(tt); }
+    cap.append(dd); fig.append(btn, cap); grid.append(fig);
+    btn.addEventListener('click', () => openLightbox(it, img.alt, title || dd.textContent));
   });
   if (data.board) { const a = $('#sketch-board'); a.href = data.board; $('#sketch-more').hidden = false; }
   sec.hidden = false; const nl = $('#nav-sketch'); if (nl) nl.hidden = false;
@@ -1807,7 +1807,7 @@ const lb = $('#lightbox');
 function openLightbox(it, alt, title) {
   if (!lb) return;
   $('#lb-img').src = 'sketchbook/img/' + (it.large || it.file); $('#lb-img').alt = alt;
-  $('#lb-cap').textContent = title || 'Untitled';
+  $('#lb-cap').textContent = title || 'Drawing';
   const link = $('#lb-link'); if (it.link) { link.href = it.link; link.hidden = false; } else link.hidden = true;
   try { lb.showModal(); } catch (_) { lb.setAttribute('open', ''); }
 }
