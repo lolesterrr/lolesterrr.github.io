@@ -59,6 +59,13 @@ const field = (xml, name) => {
 };
 const clean = s => s.replace(/\s+/g, ' ').trim();
 
+// The image's own name on Pinterest's image server, a long hex code. It stays the
+// same when Pinterest changes its pin links (they went from /pin/<number>/ to
+// /pin/e1_.../ in October 2026), so it is what tells one drawing from another.
+export const imageKey = url => (String(url || '').match(/\/([0-9a-f]{16,})\.[a-z0-9]+(?:[?#]|$)/i) || [])[1] || '';
+// The part of a pin link after /pin/: a number on older links, an e1_ code on newer ones.
+export const pinRef = link => (String(link || '').match(/\/pin\/([^/?#\s]+)/) || [])[1] || '';
+
 export function parseFeed(xml) {
   const pins = [];
   for (const [, it] of xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)) {
@@ -73,7 +80,7 @@ export function parseFeed(xml) {
     const when = new Date(clean(decode(field(it, 'pubDate'))));
     const id = (`${link} ${guid}`.match(/\/pin\/(\d+)/) || [])[1] || (image.match(/\/([0-9a-f]{16,})\.[a-z]+(?:\?|$)/i) || [])[1] || '';
     if (!id || !/^https?:\/\//i.test(image)) continue;
-    pins.push({ id, link: link || guid, title, text, image, date: isNaN(when) ? null : when.toISOString() });
+    pins.push({ id, key: imageKey(image), ref: pinRef(link || guid), link: link || guid, title, text, image, date: isNaN(when) ? null : when.toISOString() });
   }
   return pins;
 }
@@ -183,18 +190,48 @@ async function main() {
   const config = await readJSON(CONFIG_FILE, {});
   const data = await readJSON(DATA_FILE, {});
   data.items = Array.isArray(data.items) ? data.items : [];
-  const hide = new Set((Array.isArray(config.hide) ? config.hide : []).map(String));
+  // "hide" takes pin links (old or new style), the part after /pin/, or an image's file name
+  const hide = new Set((Array.isArray(config.hide) ? config.hide : []).map(h => String(h).trim()).filter(Boolean)
+    .map(h => pinRef(h) || imageKey('/' + h) || h));
+  const keysOf = it => [String(it.id), imageKey(it.source), imageKey('/' + (it.file || '')), pinRef(it.link)].filter(Boolean);
   const board = config.board ? await resolveBoard(config.board) : '';
   const feed = feedUrl(board);
   if (board && !feed) warn(`"${board}" is not a board link. Share the board itself, not a single pin.`);
   let changed = false;
+  const dropFiles = async (it, keep = new Set()) => {
+    for (const f of new Set([it.file, it.large].filter(Boolean))) if (!keep.has(path.basename(f))) await rm(path.join(IMG_DIR, path.basename(f)), { force: true });
+  };
 
-  for (const it of data.items.filter(it => hide.has(String(it.id)))) {
-    for (const f of new Set([it.file, it.large].filter(Boolean))) await rm(path.join(IMG_DIR, path.basename(f)), { force: true });
-    log(`Removed hidden drawing ${it.id}.`);
+  // Which image each hide entry took down, so it stays down if its pin link changes again.
+  // Taking an entry out of "hide" brings the drawing back at the next sync.
+  const before = JSON.stringify(data.hiddenBy || {});
+  const hiddenBy = Object.fromEntries(Object.entries(data.hiddenBy || {}).filter(([h]) => hide.has(h)));
+  const noteHidden = (keys, image) => { if (image) for (const k of keys) if (hide.has(k)) hiddenBy[k] = image; };
+  const hidden = it => keysOf(it).some(k => hide.has(k)) || Object.values(hiddenBy).includes(imageKey(it.source));
+  const removeHidden = async () => {
+    for (const it of data.items.filter(hidden)) {
+      noteHidden(keysOf(it), imageKey(it.source));
+      await dropFiles(it);
+      log(`Removed hidden drawing ${it.id}.`);
+      changed = true;
+    }
+    data.items = data.items.filter(it => !hidden(it));
+  };
+  await removeHidden();
+
+  // One drawing, one entry. Entries that share an image are merged, keeping the
+  // older pin-number entry, so a change in Pinterest's links can't double them up.
+  const sameAs = it => imageKey(it.source) || String(it.id);
+  const keeper = new Map();
+  for (const it of [...data.items].sort((a, b) => /^\d+$/.test(String(b.id)) - /^\d+$/.test(String(a.id)))) if (!keeper.has(sameAs(it))) keeper.set(sameAs(it), it);
+  const kept = data.items.filter(it => keeper.get(sameAs(it)) === it);
+  const keptFiles = new Set(kept.flatMap(it => [it.file, it.large]).filter(Boolean).map(f => path.basename(f)));
+  for (const it of data.items.filter(it => keeper.get(sameAs(it)) !== it)) {
+    await dropFiles(it, keptFiles);
+    log(`Removed ${it.id}, a second copy of ${keeper.get(sameAs(it)).id}.`);
     changed = true;
   }
-  data.items = data.items.filter(it => !hide.has(String(it.id)));
+  data.items = kept;
   if ((data.board || null) !== (board || null)) { data.board = board || null; changed = true; }
 
   if (!feed) {
@@ -212,15 +249,20 @@ async function main() {
       const pins = parseFeed(xml);
       log(`The feed lists ${pins.length} pin(s).`);
       if (!pins.length && !/<rss\b|<feed\b/i.test(xml)) warn(`${feed} did not return an RSS feed.`);
-      const known = new Set(data.items.map(it => String(it.id)));
+      // A pin is already here when its image, its pin link or its id matches an entry.
+      const known = new Map();
+      const remember = it => { for (const k of keysOf(it)) if (!known.has(k)) known.set(k, it); };
+      data.items.forEach(remember);
       await mkdir(IMG_DIR, { recursive: true });
+      const hiddenImages = () => new Set(Object.values(hiddenBy));
       for (const pin of pins) {
-        if (hide.has(pin.id)) continue;
-        if (known.has(pin.id)) {
+        if ([pin.id, pin.key, pin.ref].some(k => k && hide.has(k))) { noteHidden([pin.id, pin.key, pin.ref], pin.key); continue; }
+        if (pin.key && hiddenImages().has(pin.key)) continue;
+        const it = [pin.key, pin.ref, pin.id].filter(Boolean).map(k => known.get(k)).find(Boolean);
+        if (it) {
           // Titles and descriptions edited on Pinterest flow through too.
-          const it = data.items.find(x => String(x.id) === pin.id);
           const title = (pin.title || pin.text || '').slice(0, 140), alt = (pin.text || pin.title || '').slice(0, 300);
-          if (it && (it.title !== title || it.alt !== alt)) { it.title = title; it.alt = alt; changed = true; log(`  Updated the title of ${pin.id}`); }
+          if (it.title !== title || it.alt !== alt) { it.title = title; it.alt = alt; changed = true; log(`  Updated the title of ${it.id}`); }
           continue;
         }
         const urls = imageUrls(pin.image);
@@ -246,21 +288,25 @@ async function main() {
           ...dimensions(got.buf),
           source: used,
         });
-        known.add(pin.id);
+        remember(data.items[data.items.length - 1]);
         changed = true;
         log(`  Added ${pin.id} (${file}, ${Math.round(got.buf.length / 1024)} KB${large !== file ? `; full view ${large}` : ''})`);
       }
     }
   }
 
+  await removeHidden(); // again, for drawings the feed just matched to a hide entry by their new link
   data.items.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  if (JSON.stringify(hiddenBy) !== before) changed = true;
   const now = new Date();
   if (changed) data.updatedAt = now.toISOString();
   const lastAlive = Date.parse(data.keepAlive || '') || 0;
   if (changed || now - lastAlive > KEEP_ALIVE_DAYS * 864e5) { data.keepAlive = now.toISOString(); changed = true; }
   if (changed) {
     await mkdir(DIR, { recursive: true });
-    await writeFile(DATA_FILE, JSON.stringify({ board: data.board || null, updatedAt: data.updatedAt || null, keepAlive: data.keepAlive, items: data.items }, null, 2) + '\n');
+    const out = { board: data.board || null, updatedAt: data.updatedAt || null, keepAlive: data.keepAlive, items: data.items };
+    if (Object.keys(hiddenBy).length) out.hiddenBy = hiddenBy;
+    await writeFile(DATA_FILE, JSON.stringify(out, null, 2) + '\n');
     log(`Saved sketchbook.json (${data.items.length} drawing(s)).`);
   } else {
     log('No changes.');

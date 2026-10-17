@@ -2019,7 +2019,12 @@ doc.addEventListener('keydown', e => {
   const sec = $('#sketchbook'), grid = $('#sketches'); if (!sec || !grid) return;
   let data = null;
   try { const r = await fetch('sketchbook/sketchbook.json', { cache: 'no-cache' }); if (r.ok) data = await r.json(); } catch (_) {}
-  const items = (data && Array.isArray(data.items) ? data.items : []).filter(it => it && it.file);
+  const seen = new Set(); // one card per picture, even if the list ever names it twice
+  const items = (data && Array.isArray(data.items) ? data.items : []).filter(it => {
+    if (!it || !it.file) return false;
+    const k = (String(it.source || '').match(/\/([0-9a-f]{16,})\.[a-z0-9]+(?:[?#]|$)/i) || [])[1] || it.file;
+    if (seen.has(k)) return false; seen.add(k); return true;
+  });
   if (!items.length) return;
   const fmt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   items.forEach((it, i) => {
