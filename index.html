@@ -217,6 +217,32 @@ main { padding-bottom: 8px; }
 .panel--split > .titlebar { grid-column: 1 / -1; }
 .panel--split > .viz { border-bottom: 0; border-right: var(--line) solid var(--ink); }
 .viz-stage--relay { min-height: 400px; }
+/* Kakushin: the glyph bulb on a dark screen, next to one challenge's steps */
+.viz-stage--bulb {
+  min-height: 420px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); align-items: center; gap: 4px;
+  padding: 14px 22px 14px 8px; background: #000; color: #ece8dc; overflow: hidden;
+}
+.bulb { display: block; width: 100%; height: auto; max-height: 520px; aspect-ratio: 4 / 5; object-fit: contain; justify-self: center; background: #000; }
+.run-wrap { position: relative; min-width: 0; font-family: var(--f-pixel); }
+.run-head { margin: 0 0 10px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #f3b324; }
+.run-head span { display: block; margin-top: 3px; letter-spacing: 0; text-transform: none; color: rgb(236 232 220 / 0.55); }
+.run { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; counter-reset: step; }
+.run li {
+  counter-increment: step; display: flex; gap: 10px; align-items: baseline; padding: 4px 8px; font-size: 15px; line-height: 1.3;
+  border: 2px solid transparent; color: rgb(236 232 220 / 0.85); transition: color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
+}
+.run li::before { content: counter(step, decimal-leading-zero); flex: none; font-size: 12px; color: rgb(236 232 220 / 0.45); }
+.run.is-playing li { color: rgb(236 232 220 / 0.3); }
+.run.is-playing li.is-done { color: rgb(236 232 220 / 0.85); }
+.run.is-playing li.is-on { color: #17181f; background: #f3b324; border-color: #f3b324; }
+.run.is-playing li.is-on::before { color: #17181f; }
+.stamp {
+  position: absolute; right: 2px; bottom: -6px; padding: 4px 10px 3px; border: 3px solid #ff6a50; color: #ff6a50;
+  font-family: var(--f-display); font-size: 17px; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.1;
+  transform: rotate(-9deg); pointer-events: none;
+}
+.run.is-playing + .stamp { opacity: 0; transform: rotate(-9deg) scale(1.7); }
+.run.is-playing + .stamp.is-in { opacity: 1; transform: rotate(-9deg) scale(1); transition: opacity 0.12s ease, transform 0.22s cubic-bezier(0.3, 1.6, 0.5, 1); }
 .redact { display: inline-block; width: 6.2em; height: 0.92em; margin-left: 2px; background: currentColor; vertical-align: -0.12em; }
 .pfoot-note { font-weight: 700; }
 
@@ -394,6 +420,10 @@ body.power-cut .chaser { z-index: 86; }
   .panel--split > .viz { border-right: 0; border-bottom: var(--line) solid var(--ink); }
   .viz-stage--relay { min-height: 380px; }
 }
+@media (max-width: 560px) {
+  .viz-stage--bulb { grid-template-columns: minmax(0, 1fr); padding: 14px 16px 20px; min-height: 0; }
+  .bulb { max-height: 300px; width: auto; }
+}
 @media (max-width: 520px) {
   .facts { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .facts dd { margin-bottom: 10px; }
@@ -406,6 +436,7 @@ body.power-cut .chaser { z-index: 86; }
   .thread.is-playing .msg { transition: none; }
   .blackout.is-flicker { animation: none; }
   .pfp img { transition: none; }
+  .run li { transition: none; }
 }
 </style>
 <meta property="og:type" content="website">
@@ -462,7 +493,7 @@ body.power-cut .chaser { z-index: 86; }
     <h1 class="name" id="name"><span class="name-line" id="perch-name" data-label="my name">Kajjabwangu</span> <span class="name-line" data-label="my name">Lester</span></h1>
     <div class="hero-body">
       <p class="roles"><span>Full-stack developer, database administrator and artist.</span></p>
-      <p class="intro"><span>I study Computer Science at Makerere University in Kampala, and I'm a co-founder of Ve-Apparel. Lately I've been building a study app for pharmacy students, an IT asset register for Uganda Railways, and a cat who lives on your desktop.</span></p>
+      <p class="intro"><span>I study Computer Science at Makerere University in Kampala, and I'm a co-founder of Ve-Apparel. Lately I've been building a platform for running hackathons, a study app for pharmacy students, an IT asset register for Uganda Railways, and a cat who lives on your desktop.</span></p>
       <div class="cta">
         <a class="btn btn--ink" href="#work">See my work</a>
         <button class="btn" type="button" data-copy-email>Copy my email</button>
@@ -483,6 +514,37 @@ body.power-cut .chaser { z-index: 86; }
     </div>
 
     <div class="grid">
+      <article class="panel panel--wide panel--split" id="p-kakushin" style="--span: 12" data-window data-perch data-label="Kakushin" data-pierre="A hackathon?&#10;I'll judge the snacks.">
+        <div class="titlebar" data-drag><span class="path">lolesterrr/Kakushin</span><span class="chips"><span class="chip chip--live">In progress</span><span class="chip">Web and mobile</span></span></div>
+        <figure class="viz">
+          <div class="viz-stage viz-stage--plain viz-stage--bulb" id="bulb-stage">
+            <video class="bulb" muted playsinline preload="none" poster="img/kakushin/bulb-poster.jpg" width="512" height="640" aria-hidden="true"></video>
+            <div class="run-wrap">
+              <p class="run-head">Challenge 01<span>one idea, start to finish</span></p>
+              <ol class="run" id="run" aria-label="The steps of one challenge in Kakushin">
+                <li>Post the challenge</li>
+                <li>Teams apply</li>
+                <li>Shortlist finalists</li>
+                <li>Teams pitch</li>
+                <li>Judges score</li>
+                <li>Publish results</li>
+                <li>Issue certificates</li>
+              </ol>
+              <span class="stamp" aria-hidden="true">Verified</span>
+            </div>
+          </div>
+          <figcaption class="viz-cap">The glyph bulb from Kakushin's home page, and one challenge from first post to a certificate anyone can check.</figcaption>
+        </figure>
+        <div class="pbody">
+          <h3 class="pname">Kakushin</h3>
+          <p class="kicker">A platform for running hackathons and innovation challenges, end to end. Kakushin means innovation in Japanese.</p>
+          <p>Organisers post a challenge, take applications from teams, shortlist finalists and collect their pitches. Invited judges score each pitch against weighted criteria, the results go up on a public page, and every certificate carries a QR code that anyone can scan to check it's real. Participants keep one profile across every event, on the web or in the phone app, and follow organisations and topics to hear about new challenges. On the day itself, teams check in with a QR pass and judges can keep scoring with no signal.</p>
+          <p>It's built for universities, innovation hubs and companies that run these events every year. The first version took nine build days.</p>
+          <ul class="tags"><li>TypeScript</li><li>Hono</li><li>Cloudflare Workers</li><li>D1</li><li>R2</li><li>React</li><li>Expo</li><li>React Native</li><li>Zod</li><li>pdf-lib</li><li>Vitest</li></ul>
+          <div class="pfoot"><span class="date">Since Nov 2026</span></div>
+        </div>
+      </article>
+
       <article class="panel" id="p-dozi" style="--span: 7" data-window data-perch data-label="Dozi" data-pierre="White coat.&#10;Green cross. That&#39;s me.">
         <div class="titlebar" data-drag><span class="path">lolesterrr/DOZI</span><span class="chips"><span class="chip chip--live">In progress</span><span class="chip">Android</span></span></div>
         <figure class="viz">
@@ -693,6 +755,7 @@ body.power-cut .chaser { z-index: 86; }
             <li><span class="when">Jul</span><span>Internship at Uganda Railways Corporation. Rebuilt a helpdesk in Flutter and Django.</span></li>
             <li><span class="when">Jul</span><span>Built URC's IT inventory system, then hardened it for production. Also ve-inference.</span></li>
             <li><span class="when">Oct</span><span>Monsieur Pierre moved onto my desktop. Then I started Dozi.</span></li>
+            <li><span class="when">Nov</span><span>Kakushin, a platform for hackathons, in nine build days.</span></li>
           </ul>
         </div>
       </li>
@@ -737,23 +800,23 @@ body.power-cut .chaser { z-index: 86; }
         <div class="pbody">
           <p class="inv-help">Tools and languages, each with the number of projects on this page that use it. Pick one to see where.</p>
           <ul class="slots" id="slots">
-            <li><button class="slot" type="button" aria-pressed="false" data-uses="dozi urc pierre helpdesk mpa ve tsp aits eventfinder library">Git and GitHub<span class="n">×10</span></button></li>
-            <li><button class="slot" type="button" aria-pressed="false" data-uses="dozi urc pierre mpa library aits">TypeScript and JavaScript<span class="n">×6</span></button></li>
+            <li><button class="slot" type="button" aria-pressed="false" data-uses="kakushin dozi urc pierre helpdesk mpa ve tsp aits eventfinder library">Git and GitHub<span class="n">×11</span></button></li>
+            <li><button class="slot" type="button" aria-pressed="false" data-uses="kakushin dozi urc pierre mpa library aits">TypeScript and JavaScript<span class="n">×7</span></button></li>
             <li><button class="slot" type="button" aria-pressed="false" data-uses="ve tsp helpdesk pierre mpa">Python<span class="n">×5</span></button></li>
-            <li><button class="slot" type="button" aria-pressed="false" data-uses="dozi urc mpa library">Automated tests<span class="n">×4</span></button></li>
-            <li><button class="slot" type="button" aria-pressed="false" data-uses="urc aits library">React<span class="n">×3</span></button></li>
-            <li><button class="slot" type="button" aria-pressed="false" data-uses="dozi urc helpdesk">SQL and SQLite<span class="n">×3</span></button></li>
+            <li><button class="slot" type="button" aria-pressed="false" data-uses="kakushin dozi urc mpa library">Automated tests<span class="n">×5</span></button></li>
+            <li><button class="slot" type="button" aria-pressed="false" data-uses="kakushin urc aits library">React<span class="n">×4</span></button></li>
+            <li><button class="slot" type="button" aria-pressed="false" data-uses="kakushin dozi urc helpdesk">SQL and SQLite<span class="n">×4</span></button></li>
             <li><button class="slot" type="button" aria-pressed="false" data-uses="helpdesk eventfinder">Flutter and Dart<span class="n">×2</span></button></li>
             <li><button class="slot" type="button" aria-pressed="false" data-uses="dozi urc">Drizzle ORM<span class="n">×2</span></button></li>
             <li><button class="slot" type="button" aria-pressed="false" data-uses="dozi urc">Tailwind CSS<span class="n">×2</span></button></li>
-            <li><button class="slot" type="button" aria-pressed="false" data-uses="dozi">React Native and Expo<span class="n">×1</span></button></li>
+            <li><button class="slot" type="button" aria-pressed="false" data-uses="kakushin dozi">React Native and Expo<span class="n">×2</span></button></li>
+            <li><button class="slot" type="button" aria-pressed="false" data-uses="kakushin mpa">Cloudflare Workers<span class="n">×2</span></button></li>
             <li><button class="slot" type="button" aria-pressed="false" data-uses="urc">Node.js and Express<span class="n">×1</span></button></li>
             <li><button class="slot" type="button" aria-pressed="false" data-uses="helpdesk">Django REST Framework<span class="n">×1</span></button></li>
             <li><button class="slot" type="button" aria-pressed="false" data-uses="ve">FastAPI<span class="n">×1</span></button></li>
             <li><button class="slot" type="button" aria-pressed="false" data-uses="ve">PyTorch and CLIP<span class="n">×1</span></button></li>
             <li><button class="slot" type="button" aria-pressed="false" data-uses="pierre">Swift and AppKit<span class="n">×1</span></button></li>
             <li><button class="slot" type="button" aria-pressed="false" data-uses="ve">Docker<span class="n">×1</span></button></li>
-            <li><button class="slot" type="button" aria-pressed="false" data-uses="mpa">Cloudflare Workers<span class="n">×1</span></button></li>
             <li><button class="slot" type="button" aria-pressed="false" data-uses="" data-note="A CCNA1 certificate. Networking doesn't have a project on this page yet.">Networking<span class="n">CCNA1</span></button></li>
           </ul>
           <p class="inv-detail" id="inv-detail" aria-live="polite">Pick an item to see which projects use it.</p>
@@ -1455,7 +1518,7 @@ if (!mqFine.matches) $('#work-note').textContent = 'Tap a panel and Pierre may c
 })();
 
 /* ---------- inventory ---------- */
-const NAMES = { dozi: 'Dozi', urc: 'URC IT Inventory', pierre: 'Monsieur Pierre', helpdesk: 'URC Helpdesk', mpa: 'MPA', ve: 've-inference', tsp: 'Travelling Salesman', aits: 'AITS', eventfinder: 'EventFinder', library: 'the library system' };
+const NAMES = { kakushin: 'Kakushin', dozi: 'Dozi', urc: 'URC IT Inventory', pierre: 'Monsieur Pierre', helpdesk: 'URC Helpdesk', mpa: 'MPA', ve: 've-inference', tsp: 'Travelling Salesman', aits: 'AITS', eventfinder: 'EventFinder', library: 'the library system' };
 const slots = $$('#slots .slot'), invDetail = $('#inv-detail');
 function listJoin(a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
 function showSlot(btn) {
@@ -1525,6 +1588,46 @@ function label(ctx, text, x, y, opts = {}) {
   ctx.textAlign = opts.align || 'left'; ctx.textBaseline = opts.base || 'alphabetic';
   ctx.fillText(text, x, y);
 }
+
+/* Kakushin: the bulb grows in once, then keeps turning; the steps of one challenge light up beside it */
+(() => {
+  const stage = $('#bulb-stage'); if (!stage) return;
+  const video = $('video', stage), run = $('#run'), steps = $$('li', run), stamp = $('.stamp', stage);
+  let visible = false, phase = 'intro', i = -1, timer = 0;
+  function useClip(name) { phase = name; video.loop = name === 'loop'; video.src = `img/kakushin/bulb-${name}.mp4`; }
+  function sync() {
+    if (reduce) { video.pause(); return; }
+    if (!video.getAttribute('src')) useClip('intro');
+    if (visible && document.visibilityState === 'visible') { const p = video.play(); if (p) p.catch(() => {}); } else video.pause();
+  }
+  video.addEventListener('ended', () => { if (phase === 'intro') { useClip('loop'); sync(); } });
+  video.addEventListener('error', () => { if (phase === 'intro') { useClip('loop'); sync(); } });
+  function paint() {
+    steps.forEach((li, n) => { li.classList.toggle('is-done', n < i); li.classList.toggle('is-on', n === i); });
+    stamp.classList.toggle('is-in', i >= steps.length);
+  }
+  function tick() {
+    clearTimeout(timer);
+    if (reduce || !visible) return;
+    i = i >= steps.length ? -1 : i + 1;
+    paint();
+    timer = setTimeout(tick, i < 0 ? 500 : i >= steps.length ? 2600 : i === steps.length - 1 ? 1300 : 1050);
+  }
+  function motion() {
+    run.classList.toggle('is-playing', !reduce);
+    if (reduce) { clearTimeout(timer); video.removeAttribute('src'); video.load(); } else if (visible) tick();
+    sync();
+  }
+  if ('IntersectionObserver' in window) new IntersectionObserver(es => {
+    const was = visible; visible = es[0].isIntersecting;
+    if (visible && !was) { i = -1; tick(); } if (!visible) clearTimeout(timer);
+    sync();
+  }, { threshold: 0.3 }).observe(stage);
+  else { visible = true; tick(); }
+  doc.addEventListener('visibilitychange', sync);
+  on('motion', motion);
+  motion();
+})();
 
 /* Dozi: FSRS retention curve */
 const REVIEWS = [0, 1, 4, 11, 26], STAB = [1, 3, 7, 15, 35], DAYS = 42;
